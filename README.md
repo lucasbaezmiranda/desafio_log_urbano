@@ -68,6 +68,18 @@ docker-compose up
 - `PUT /clients/:id` - Actualizar cliente
 - `DELETE /clients/:id` - Eliminar cliente
 
+### Servicios
+- `POST /services` - Crear servicio de transporte
+- `GET /services` - Listar servicios (acepta `?clientId=CLI-0000001`)
+- `GET /services/:id` - Obtener servicio con datos del cliente
+- `PATCH /services/:id/status` - Cambiar estado (PENDING, IN_TRANSIT, DELIVERED, CANCELLED)
+
+### Facturación
+- `GET /billing/pending` - Ver servicios pendientes de facturar
+- `POST /billing/process` - Ejecutar facturación por lotes (`{ "receiptBookId": "TAL-0000001" }`)
+- `GET /billing/batches` - Listar lotes de facturación
+- `GET /billing/batches/:id` - Detalle de un lote con sus facturas
+
 ### Talonarios
 - `POST /receipt-books` - Crear talonario
 - `GET /receipt-books` - Listar talonarios
