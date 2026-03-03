@@ -30,7 +30,7 @@ export class Invoice {
   @Column({ name: 'total_amount', type: 'decimal', precision: 12, scale: 2 })
   totalAmount: number;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
   cae: string | null;
 
   @Column({ name: 'cae_expiration_date', type: 'date', nullable: true })

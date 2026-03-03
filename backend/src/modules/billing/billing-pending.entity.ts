@@ -18,7 +18,7 @@ export class BillingPending {
   @Column({ type: 'enum', enum: BillingPendingStatus, default: BillingPendingStatus.PENDING })
   status: BillingPendingStatus;
 
-  @Column({ name: 'invoice_id', length: 11, nullable: true })
+  @Column({ type: 'varchar', name: 'invoice_id', length: 11, nullable: true })
   invoiceId: string | null;
 
   @ManyToOne(() => Invoice, { nullable: true })

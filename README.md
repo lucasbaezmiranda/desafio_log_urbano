@@ -55,8 +55,8 @@ cp .env.example .env
 # Levantar con Docker
 docker-compose up
 
-# El backend estará disponible en http://localhost:3000
-# Health check: GET http://localhost:3000/health
+# El backend estará disponible en http://localhost:3001
+# Health check: GET http://localhost:3001/health
 ```
 
 ## Endpoints Disponibles
