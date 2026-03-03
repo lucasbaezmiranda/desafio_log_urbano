@@ -1,0 +1,23 @@
+export enum TaxCondition {
+  RESPONSABLE_INSCRIPTO = 'RESPONSABLE_INSCRIPTO',
+  MONOTRIBUTO = 'MONOTRIBUTO',
+  EXENTO = 'EXENTO',
+  CONSUMIDOR_FINAL = 'CONSUMIDOR_FINAL',
+}
+
+export enum ServiceStatus {
+  PENDING = 'PENDING',
+  IN_TRANSIT = 'IN_TRANSIT',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum BillingPendingStatus {
+  PENDING = 'PENDING',
+  INVOICED = 'INVOICED',
+}
+
+export enum InvoiceBatchStatus {
+  PROCESSED = 'PROCESSED',
+  ERROR = 'ERROR',
+}
