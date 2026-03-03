@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   getBillingPending,
   getReceiptBooks,
@@ -15,6 +15,8 @@ export default function BillingTab() {
   const [expandedBatch, setExpandedBatch] = useState<any>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = () => {
     getBillingPending().then(setPending).catch(() => {});
@@ -24,6 +26,13 @@ export default function BillingTab() {
 
   useEffect(() => { load(); }, []);
 
+  // Limpiar polling al desmontar
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
   const handleProcess = async () => {
     setError('');
     setSuccess('');
@@ -32,10 +41,50 @@ export default function BillingTab() {
       return;
     }
     try {
+      setProcessing(true);
       const result = await processBilling(selectedBook);
-      setSuccess(`Lote ${result.id} generado: ${result.invoiceCount} facturas por $${Number(result.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`);
-      load();
+
+      if (result.status === 'completed' && result.batch) {
+        // Respuesta sincrónica (desarrollo local sin SQS)
+        const batch = result.batch;
+        setSuccess(`Lote ${batch.id} generado: ${batch.invoiceCount} facturas por $${Number(batch.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`);
+        setProcessing(false);
+        load();
+      } else {
+        // Respuesta async (SQS) → polling hasta que aparezca nuevo lote
+        setSuccess('Procesando facturación... esperando resultado');
+        const previousBatchCount = batches.length;
+        pollingRef.current = setInterval(async () => {
+          try {
+            const updatedBatches = await getBatches();
+            if (updatedBatches.length > previousBatchCount) {
+              // Nuevo lote apareció
+              if (pollingRef.current) clearInterval(pollingRef.current);
+              pollingRef.current = null;
+              const newBatch = updatedBatches[updatedBatches.length - 1];
+              setSuccess(`Lote ${newBatch.id} generado: ${newBatch.invoiceCount} facturas por $${Number(newBatch.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`);
+              setProcessing(false);
+              load();
+            }
+          } catch {
+            // Ignorar errores de polling
+          }
+        }, 3000);
+
+        // Timeout del polling a 60 segundos
+        setTimeout(() => {
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            setProcessing(false);
+            setSuccess('');
+            setError('Timeout esperando el resultado. Revisá la pestaña de lotes.');
+            load();
+          }
+        }, 60000);
+      }
     } catch (err: any) {
+      setProcessing(false);
       setError(err.message);
     }
   };
@@ -91,8 +140,8 @@ export default function BillingTab() {
               </option>
             ))}
           </select>
-          <button onClick={handleProcess} disabled={pending.length === 0}>
-            Facturar lote
+          <button onClick={handleProcess} disabled={pending.length === 0 || processing}>
+            {processing ? 'Procesando...' : 'Facturar lote'}
           </button>
         </div>
         {error && <p className="error">{error}</p>}
@@ -126,14 +175,26 @@ export default function BillingTab() {
                   <td>{expandedBatch?.id === b.id ? '▲' : '▼'}</td>
                 </tr>
                 {expandedBatch?.id === b.id && expandedBatch.invoices?.map((inv: any) => (
-                  <tr key={inv.id} className="row-detail">
-                    <td></td>
-                    <td><code>{inv.id}</code></td>
-                    <td>{inv.invoiceNumber}</td>
-                    <td>{inv.client?.businessName || inv.clientId}</td>
-                    <td>${Number(inv.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-                    <td colSpan={2}>{inv.cae || 'Sin CAE'}</td>
-                  </tr>
+                  <>
+                    <tr key={inv.id} className="row-detail">
+                      <td></td>
+                      <td><code>{inv.id}</code></td>
+                      <td>{inv.invoiceNumber}</td>
+                      <td>{inv.client?.businessName || inv.clientId}</td>
+                      <td>${Number(inv.totalAmount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                      <td colSpan={2}>{inv.cae || 'Sin CAE'}</td>
+                    </tr>
+                    {inv.items?.map((item: any) => (
+                      <tr key={item.id} className="row-detail" style={{ opacity: 0.7 }}>
+                        <td></td>
+                        <td></td>
+                        <td style={{ paddingLeft: '2rem', fontSize: '0.85em' }}>↳ {item.service?.description || item.serviceId}</td>
+                        <td style={{ fontSize: '0.85em' }}>{item.service?.client?.businessName || ''}</td>
+                        <td style={{ fontSize: '0.85em' }}>${Number(item.service?.amount || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    ))}
+                  </>
                 ))}
               </>
             ))}

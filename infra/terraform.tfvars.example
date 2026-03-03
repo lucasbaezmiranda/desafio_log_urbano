@@ -1,0 +1,12 @@
+# Copiar este archivo a terraform.tfvars y completar los valores
+
+aws_region   = "us-east-1"
+project_name = "desafio-log-urbano"
+environment  = "dev"
+
+db_username = "logurbano"
+db_password = "CHANGE_ME_secure_password_here"
+db_name     = "logurbano"
+
+# Email para notificaciones SNS (dejar vacío para no suscribir)
+notification_email = ""

@@ -1,5 +1,6 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { InvoiceBatch } from './invoice-batch.entity';
+import { BillingPending } from './billing-pending.entity';
 import { Client } from '../client/client.entity';
 
 @Entity('invoices')
@@ -29,6 +30,9 @@ export class Invoice {
 
   @Column({ name: 'total_amount', type: 'decimal', precision: 12, scale: 2 })
   totalAmount: number;
+
+  @OneToMany(() => BillingPending, (bp) => bp.invoice)
+  items: BillingPending[];
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   cae: string | null;

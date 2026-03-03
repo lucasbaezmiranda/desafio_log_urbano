@@ -38,3 +38,10 @@ npm-debug.log*
 
 # Coverage
 coverage/
+
+# Lambda zip
+infra/lambda_worker.zip
+
+# Notas
+notas.docx
+.~lock.*
