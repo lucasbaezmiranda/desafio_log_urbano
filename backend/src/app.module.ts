@@ -4,6 +4,7 @@ import { ClientModule } from './modules/client/client.module';
 import { ServiceModule } from './modules/service/service.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { ReceiptBookModule } from './modules/receipt-book/receipt-book.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { SequencesInitializer } from './common/sequences.initializer';
 import { HealthController } from './health.controller';
 
@@ -24,6 +25,7 @@ import { HealthController } from './health.controller';
     ServiceModule,
     BillingModule,
     ReceiptBookModule,
+    AuthModule,
   ],
   controllers: [HealthController],
   providers: [SequencesInitializer],
