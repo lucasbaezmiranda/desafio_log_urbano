@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BillingService } from './billing.service';
+import { BusinessException } from '../../common/errors/business.exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { BillingPending } from './billing-pending.entity';
 import { InvoiceBatch } from './invoice-batch.entity';
 import { Invoice } from './invoice.entity';
@@ -53,26 +54,32 @@ describe('BillingService', () => {
     mockDataSource.transaction.mockImplementation((cb) => cb(mockManager));
   });
 
-  it('should throw NotFoundException if receipt book not found', async () => {
+  it('should throw BusinessException with RECEIPT_BOOK_NOT_FOUND if receipt book not found', async () => {
     mockReceiptBookRepo.findOneBy.mockResolvedValue(null);
 
     await expect(service.process('TAL-9999999')).rejects.toThrow(
-      NotFoundException,
+      BusinessException,
     );
+    await expect(service.process('TAL-9999999')).rejects.toMatchObject({
+      errorCode: ErrorCode.RECEIPT_BOOK_NOT_FOUND,
+    });
   });
 
-  it('should throw BadRequestException if receipt book is inactive', async () => {
+  it('should throw BusinessException with RECEIPT_BOOK_INACTIVE if receipt book is inactive', async () => {
     mockReceiptBookRepo.findOneBy.mockResolvedValue({
       id: 'TAL-0000001',
       isActive: false,
     });
 
     await expect(service.process('TAL-0000001')).rejects.toThrow(
-      BadRequestException,
+      BusinessException,
     );
+    await expect(service.process('TAL-0000001')).rejects.toMatchObject({
+      errorCode: ErrorCode.RECEIPT_BOOK_INACTIVE,
+    });
   });
 
-  it('should throw BadRequestException if no pending services', async () => {
+  it('should throw BusinessException with NO_PENDING_SERVICES if no pending services', async () => {
     mockReceiptBookRepo.findOneBy.mockResolvedValue({
       id: 'TAL-0000001',
       isActive: true,
@@ -80,8 +87,11 @@ describe('BillingService', () => {
     mockPendingRepo.find.mockResolvedValue([]);
 
     await expect(service.process('TAL-0000001')).rejects.toThrow(
-      BadRequestException,
+      BusinessException,
     );
+    await expect(service.process('TAL-0000001')).rejects.toMatchObject({
+      errorCode: ErrorCode.NO_PENDING_SERVICES,
+    });
   });
 
   it('should process billing batch grouping by client', async () => {

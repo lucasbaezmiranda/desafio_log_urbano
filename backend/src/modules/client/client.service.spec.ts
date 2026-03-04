@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { NotFoundException } from '@nestjs/common';
 import { ClientService } from './client.service';
 import { Client } from './client.entity';
 import { TaxCondition } from '../../common/enums';
+import { BusinessException } from '../../common/errors/business.exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 
 describe('ClientService', () => {
   let service: ClientService;
@@ -61,12 +62,15 @@ describe('ClientService', () => {
     expect(result).toEqual(clients);
   });
 
-  it('should throw NotFoundException when client not found', async () => {
+  it('should throw BusinessException with CLIENT_NOT_FOUND when client not found', async () => {
     mockRepo.findOneBy.mockResolvedValue(null);
 
     await expect(service.findOne('CLI-9999999')).rejects.toThrow(
-      NotFoundException,
+      BusinessException,
     );
+    await expect(service.findOne('CLI-9999999')).rejects.toMatchObject({
+      errorCode: ErrorCode.CLIENT_NOT_FOUND,
+    });
   });
 
   it('should update a client', async () => {

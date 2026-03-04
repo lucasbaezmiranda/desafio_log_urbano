@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { BillingPending } from './billing-pending.entity';
@@ -9,6 +9,8 @@ import { BillingPendingStatus, InvoiceBatchStatus } from '../../common/enums';
 import { generateCustomId, ID_PREFIXES, ID_SEQUENCES } from '../../common/id-generator';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+import { BusinessException } from '../../common/errors/business.exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 
 @Injectable()
 export class BillingService {
@@ -56,11 +58,11 @@ export class BillingService {
   async processAsync(receiptBookId: string): Promise<{ accepted: boolean; batch?: InvoiceBatch }> {
     // Validar antes de encolar
     const receiptBook = await this.receiptBookRepo.findOneBy({ id: receiptBookId });
-    if (!receiptBook) throw new NotFoundException(`ReceiptBook ${receiptBookId} not found`);
-    if (!receiptBook.isActive) throw new BadRequestException(`ReceiptBook ${receiptBookId} is not active`);
+    if (!receiptBook) throw new BusinessException(HttpStatus.NOT_FOUND, ErrorCode.RECEIPT_BOOK_NOT_FOUND, `El talonario ${receiptBookId} no existe`);
+    if (!receiptBook.isActive) throw new BusinessException(HttpStatus.BAD_REQUEST, ErrorCode.RECEIPT_BOOK_INACTIVE, `El talonario ${receiptBookId} no está activo`);
 
     const pendingCount = await this.pendingRepo.count({ where: { status: BillingPendingStatus.PENDING } });
-    if (pendingCount === 0) throw new BadRequestException('No pending services to invoice');
+    if (pendingCount === 0) throw new BusinessException(HttpStatus.BAD_REQUEST, ErrorCode.NO_PENDING_SERVICES, 'No hay servicios pendientes para facturar');
 
     if (this.sqsClient && this.sqsQueueUrl) {
       await this.sqsClient.send(new SendMessageCommand({
@@ -81,15 +83,15 @@ export class BillingService {
    */
   async process(receiptBookId: string): Promise<InvoiceBatch> {
     const receiptBook = await this.receiptBookRepo.findOneBy({ id: receiptBookId });
-    if (!receiptBook) throw new NotFoundException(`ReceiptBook ${receiptBookId} not found`);
-    if (!receiptBook.isActive) throw new BadRequestException(`ReceiptBook ${receiptBookId} is not active`);
+    if (!receiptBook) throw new BusinessException(HttpStatus.NOT_FOUND, ErrorCode.RECEIPT_BOOK_NOT_FOUND, `El talonario ${receiptBookId} no existe`);
+    if (!receiptBook.isActive) throw new BusinessException(HttpStatus.BAD_REQUEST, ErrorCode.RECEIPT_BOOK_INACTIVE, `El talonario ${receiptBookId} no está activo`);
 
     const pendings = await this.pendingRepo.find({
       where: { status: BillingPendingStatus.PENDING },
       relations: ['service'],
     });
 
-    if (pendings.length === 0) throw new BadRequestException('No pending services to invoice');
+    if (pendings.length === 0) throw new BusinessException(HttpStatus.BAD_REQUEST, ErrorCode.NO_PENDING_SERVICES, 'No hay servicios pendientes para facturar');
 
     // Agrupar pendientes por cliente
     const byClient = new Map<string, BillingPending[]>();
@@ -184,7 +186,7 @@ export class BillingService {
       where: { id },
       relations: ['invoices', 'invoices.client', 'invoices.items', 'invoices.items.service', 'receiptBook'],
     });
-    if (!batch) throw new NotFoundException(`Batch ${id} not found`);
+    if (!batch) throw new BusinessException(HttpStatus.NOT_FOUND, ErrorCode.BATCH_NOT_FOUND, `El lote ${id} no existe`);
     return batch;
   }
 

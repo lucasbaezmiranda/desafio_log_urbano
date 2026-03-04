@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Service } from './service.entity';
@@ -7,6 +7,8 @@ import { UpdateServiceStatusDto } from './dto/update-service-status.dto';
 import { generateCustomId, ID_PREFIXES, ID_SEQUENCES } from '../../common/id-generator';
 import { ServiceStatus } from '../../common/enums';
 import { BillingPendingService } from '../billing/billing-pending.service';
+import { BusinessException } from '../../common/errors/business.exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 
 @Injectable()
 export class ServiceService {
@@ -43,7 +45,7 @@ export class ServiceService {
       where: { id },
       relations: ['client'],
     });
-    if (!service) throw new NotFoundException(`Service ${id} not found`);
+    if (!service) throw new BusinessException(HttpStatus.NOT_FOUND, ErrorCode.SERVICE_NOT_FOUND, `El servicio ${id} no existe`);
     return service;
   }
 

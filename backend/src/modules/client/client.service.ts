@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Client } from './client.entity';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { generateCustomId, ID_PREFIXES, ID_SEQUENCES } from '../../common/id-generator';
+import { BusinessException } from '../../common/errors/business.exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 
 @Injectable()
 export class ClientService {
@@ -30,7 +32,7 @@ export class ClientService {
 
   async findOne(id: string): Promise<Client> {
     const client = await this.clientRepo.findOneBy({ id });
-    if (!client) throw new NotFoundException(`Client ${id} not found`);
+    if (!client) throw new BusinessException(HttpStatus.NOT_FOUND, ErrorCode.CLIENT_NOT_FOUND, `El cliente ${id} no existe`);
     return client;
   }
 
